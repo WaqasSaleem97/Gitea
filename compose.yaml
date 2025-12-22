@@ -44,7 +44,7 @@ networks:
 #    external: true
 
 
-# Gitea is not allowed to webhook to Jenkins folow these steps
+# Gitea is not allowed to webhook to Jenkins follow these steps
 # 1) Go to Gitea Container
 # 2) cat /data/gitea/conf/app.ini
 # 3) echo "[webhook]" >> /data/gitea/conf/app.ini
