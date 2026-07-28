@@ -18,7 +18,7 @@ services:
     networks:
       - webnet
   db:
-    image: postgres:alpine
+    image: postgres:17-alpine
     container_name: gitea_db
     environment:
       - POSTGRES_USER=gitea
