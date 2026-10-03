@@ -1,34 +1,62 @@
+# GitHub Codespaces provides CODESPACE_NAME automatically.
+# Keep forwarded port 3000 set to Protocol: HTTP and Visibility: Public.
+
 services:
-  gitea:
-    image: gitea/gitea:latest
-    container_name: gitea
-    environment:
-      - DB_TYPE=postgres
-      - DB_HOST=db:5432
-      - DB_NAME=gitea
-      - DB_USER=gitea
-      - DB_PASSWD=gitea
-    restart: always
-    volumes:
-      - gitea:/data
-    ports:
-      - 3000:3000
-    extra_hosts:
-      - "www.jenkins.com:host-gateway"
-    networks:
-      - webnet
   db:
     image: postgres:17-alpine
     container_name: gitea_db
+    restart: unless-stopped
     environment:
-      - POSTGRES_USER=gitea
-      - POSTGRES_PASSWORD=gitea
-      - POSTGRES_DB=gitea
-    restart: always
+      POSTGRES_USER: gitea
+      POSTGRES_PASSWORD: gitea
+      POSTGRES_DB: gitea
     volumes:
       - gitea_postgres:/var/lib/postgresql/data
     expose:
-      - 5432
+      - "5432"
+    networks:
+      - webnet
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  gitea:
+    image: gitea/gitea:28.0.0
+    container_name: gitea
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+
+      GITEA__database__DB_TYPE: postgres
+      GITEA__database__HOST: db:5432
+      GITEA__database__NAME: gitea
+      GITEA__database__USER: gitea
+      GITEA__database__PASSWD: gitea
+      GITEA__database__SSL_MODE: disable
+
+      # Codespaces terminates HTTPS at its proxy. Gitea still listens over
+      # plain HTTP inside the Codespace.
+      GITEA__server__PROTOCOL: http
+      GITEA__server__HTTP_ADDR: 0.0.0.0
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__LOCAL_ROOT_URL: http://localhost:3000/
+      GITEA__server__DOMAIN: "${CODESPACE_NAME}-3000.app.github.dev"
+      GITEA__server__ROOT_URL: "https://${CODESPACE_NAME}-3000.app.github.dev/"
+      GITEA__server__DISABLE_SSH: "true"
+
+    volumes:
+      - gitea:/data
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "www.jenkins.com:host-gateway"
     networks:
       - webnet
 
